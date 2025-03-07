@@ -1,0 +1,21 @@
+{
+  "name": "pdf-viewer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "http-server ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "jquery": "^3.7.1",
+    "pdfjs-dist": "^4.10.38",
+    "turn.js": "^1.0.2"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

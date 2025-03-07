@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizzatore PDF Sfogliabile</title>
+
+    <!-- PDF.js (versione CDN non modulare) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    
+    <!-- Configurazione worker per PDF.js -->
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+    </script>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Turn.js (versione CDN) -->
+    <script src="./node_modules/turn.js/turn.js"></script>
+
+    <style>
+        body { text-align: center; background: #f5f5f5; font-family: Arial, sans-serif; }
+        h1 { color: #333; }
+        #flipbook { width: 800px; height: 600px; margin: 50px auto; }
+        .page { width: 400px; height: 600px; background: white; display: flex; align-items: center; justify-content: center; }
+        canvas { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <h1>Visualizzatore PDF Sfogliabile</h1>
+    
+    <div id="flipbook"></div>
+
+    <script>
+        var pdfUrl = "/pdf/223344.pdf"; // Percorso del PDF
+        var pdfDoc = null;
+
+        // Carica il PDF
+        pdfjsLib.getDocument(pdfUrl).promise.then(function (doc) {
+            pdfDoc = doc;
+            var numPages = doc.numPages;
+
+            // Aggiungi una pagina per ogni pagina del PDF
+            for (let i = 1; i <= numPages; i++) {
+                let canvas = document.createElement("canvas");
+                canvas.className = "page";
+                document.getElementById("flipbook").appendChild(canvas);
+                renderPage(i, canvas);
+            }
+
+            // Inizializza il flipbook con Turn.js
+            $("#flipbook").turn({
+                width: 800,
+                height: 600,
+                autoCenter: true
+            });
+        });
+
+        // Funzione per renderizzare una pagina
+        function renderPage(pageNumber, canvas) {
+            pdfDoc.getPage(pageNumber).then(function (page) {
+                var viewport = page.getViewport({ scale: 1.5 });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                var ctx = canvas.getContext("2d");
+                var renderContext = { canvasContext: ctx, viewport: viewport };
+                page.render(renderContext);
+            });
+        }
+    </script>
+
+</body>
+</html>
