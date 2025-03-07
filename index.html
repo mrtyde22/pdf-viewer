@@ -5,19 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portfolio di Elena</title>
 
-  <!-- PDF.js (versione CDN non modulare) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
   </script>
 
-  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-  <!-- Hammer.js (opzionale, se serve il supporto gesture) -->
-  <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
-
-  <!-- Turn.js -->
   <script src="node_modules/turn.js/turn.js"></script>
 
   <style>
@@ -27,12 +21,11 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden; /* rimuovi se vuoi lo scroll verticale */
+      overflow: hidden;
       background: #f5f5f5;
       font-family: Arial, sans-serif;
     }
 
-    /* Contenitore principale che gestisce l'impaginazione */
     #container {
       display: flex;
       flex-direction: column;
@@ -42,10 +35,10 @@
       box-sizing: border-box;
     }
 
-    /* Header con il titolo */
     #header {
       flex: 0 0 auto;
       margin: 10px 0;
+      text-align: center;
     }
 
     #header h1 {
@@ -53,71 +46,56 @@
       margin: 0;
     }
 
-    /* Contenitore del flipbook, si espande per occupare lo spazio rimanente */
     #flipbook-container {
       flex: 1 1 auto;
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 100%;
-      height: 100%;
-      overflow: hidden; /* evita scroll nel contenitore del flipbook */
+      width: 95%; /* Leggermente più piccolo per margine */
+      height: 95%;
+      overflow: hidden;
     }
 
-    /* Il flipbook vero e proprio: dimensioni impostate via JS */
     #flipbook {
       box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
       background-color: #fff;
     }
 
-    /* Stile delle singole pagine (canvas) */
     .page {
       background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+
     canvas {
       width: 100%;
       height: auto;
       display: block;
     }
 
-    /* Barra dei controlli in basso */
     #controls {
       flex: 0 0 auto;
       margin: 10px 0;
       text-align: center;
     }
+
     #controls button {
       padding: 10px 20px;
       margin: 0 10px;
       font-size: 1em;
       cursor: pointer;
     }
-
-    /* Se vuoi permettere lo scroll su schermi piccoli, puoi usare una media query:
-       @media (max-width: 768px) {
-         html, body {
-           overflow: auto;
-         }
-       }
-    */
   </style>
 </head>
 <body>
   <div id="container">
-    <!-- Header con titolo -->
     <div id="header">
       <h1>Portfolio di Elena</h1>
     </div>
-
-    <!-- Contenitore del flipbook -->
     <div id="flipbook-container">
       <div id="flipbook"></div>
     </div>
-
-    <!-- Barra dei controlli -->
     <div id="controls">
       <button id="prevPage">Pagina Precedente</button>
       <button id="nextPage">Pagina Successiva</button>
@@ -125,26 +103,17 @@
   </div>
 
   <script>
-    // URL del PDF da visualizzare
-    var pdfUrl = "https://mrtyde22.github.io/pdf-viewer/pdf/Statuto_Svoltastudenti_2020.pdf";
+    var pdfUrl = "pdf/Statuto_Svoltastudenti_2020.pdf"; // Percorso relativo
     var pdfDoc = null;
 
-    // Calcola dimensioni proporzionali per UNA singola pagina
     function getProportionalDimensions(page) {
-      // Ottiene dimensioni originali della pagina
       const viewport = page.getViewport({ scale: 1 });
       const aspectRatio = viewport.width / viewport.height;
-
-      // Dimensioni del contenitore del flipbook
       const container = document.getElementById('flipbook-container');
-      // Lasciamo un po' di margine, ad es. 90% di larghezza/altezza
       const containerWidth = container.clientWidth * 0.9;
       const containerHeight = container.clientHeight * 0.9;
-
       let width = containerWidth;
       let height = width / aspectRatio;
-
-      // Se l'altezza supera il contenitore, ricalcoliamo
       if (height > containerHeight) {
         height = containerHeight;
         width = height * aspectRatio;
@@ -152,60 +121,45 @@
       return { width, height };
     }
 
-    // Carica il PDF e crea un canvas per ogni pagina
     pdfjsLib.getDocument(pdfUrl).promise.then(function(doc) {
       pdfDoc = doc;
       const numPages = doc.numPages;
-
-      // Genera un <canvas> per ogni pagina
       for (let i = 1; i <= numPages; i++) {
         const canvas = document.createElement('canvas');
         canvas.className = 'page';
         document.getElementById('flipbook').appendChild(canvas);
         renderPage(i, canvas);
       }
-
-      // Quando la prima pagina è pronta, inizializza Turn.js
       pdfDoc.getPage(1).then(function(page) {
         const { width, height } = getProportionalDimensions(page);
-
-        // Turn.js: larghezza * 2 per mostrare due pagine affiancate
         $('#flipbook').turn({
           width: width * 2,
           height: height,
           autoCenter: true,
         });
-
-        // Forza l'apertura alla pagina 1
         $('#flipbook').turn('page', 1);
       });
+    }).catch(function(error){
+      console.error("Errore caricamento PDF", error);
     });
 
-    // Renderizza una pagina del PDF dentro un canvas
     function renderPage(pageNumber, canvas) {
       pdfDoc.getPage(pageNumber).then(function(page) {
         const { width, height } = getProportionalDimensions(page);
         const scale = width / page.getViewport({ scale: 1 }).width;
         const viewport = page.getViewport({ scale });
-
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         const ctx = canvas.getContext('2d');
-
-        // Render della pagina PDF
         page.render({ canvasContext: ctx, viewport });
       });
     }
 
-    // Ridimensiona il flipbook (e rirenderizza) al resize
     function resizeFlipbook() {
       if (!pdfDoc) return;
       pdfDoc.getPage(1).then(function(page) {
         const { width, height } = getProportionalDimensions(page);
-        // Aggiorna dimensioni in Turn.js
         $('#flipbook').turn('size', width * 2, height);
-
-        // Rirenderizza tutte le pagine per il nuovo formato
         const canvases = document.querySelectorAll('#flipbook canvas');
         canvases.forEach((canvas, index) => {
           renderPage(index + 1, canvas);
@@ -213,13 +167,11 @@
       });
     }
 
-    // Eventi di resize/orientamento
     window.addEventListener('resize', resizeFlipbook);
     window.addEventListener('orientationchange', () => {
       setTimeout(resizeFlipbook, 500);
     });
 
-    // Pulsanti di navigazione
     document.getElementById('prevPage').addEventListener('click', () => {
       $('#flipbook').turn('previous');
     });
