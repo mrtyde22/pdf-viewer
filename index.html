@@ -16,10 +16,10 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- Aggiungi Hammer.js prima di Turn.js -->
+    <!-- Hammer.js -->
     <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
 
-    <!-- Turn.js (versione CDN) -->
+    <!-- Turn.js -->
     <script src="/node_modules/turn.js/turn.js"></script>
 
     <style>
@@ -78,31 +78,44 @@
                 height: 600,
                 autoCenter: true
             });
+
+            // Forza la visualizzazione della prima pagina
+            $("#flipbook").turn("page", 1);
+
+            // Ridimensiona il flipbook al caricamento
+            resizeFlipbook();
         });
 
         // Funzione per renderizzare una pagina
         function renderPage(pageNumber, canvas) {
             pdfDoc.getPage(pageNumber).then(function (page) {
-                var scale = window.innerWidth <= 768 ? 1.0 : 1.5; // Scala ridotta per mobile
-                var viewport = page.getViewport({ scale: scale });
+                const flipbookWidth = $("#flipbook").width();
+                const scale = flipbookWidth / page.getViewport({ scale: 1 }).width;
+                const viewport = page.getViewport({ scale: scale });
+
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
-                var ctx = canvas.getContext("2d");
-                var renderContext = { canvasContext: ctx, viewport: viewport };
+                const ctx = canvas.getContext("2d");
+                const renderContext = { canvasContext: ctx, viewport: viewport };
                 page.render(renderContext);
             });
         }
 
         // Funzione per ridimensionare il flipbook
         function resizeFlipbook() {
-            var width = window.innerWidth * 0.9; // 90% della larghezza della finestra
-            var height = width * 0.75; // Mantieni un rapporto 4:3
-
-            if (window.innerWidth <= 768) {
-                height = window.innerHeight * 0.6; // 60% dell'altezza della finestra per mobile
-            }
+            const isMobile = window.innerWidth <= 768;
+            const width = isMobile ? window.innerWidth : 800;
+            const height = isMobile ? window.innerHeight * 0.7 : 600;
 
             $("#flipbook").turn("size", width, height);
+
+            // Forza il ridisegno delle pagine
+            if (pdfDoc) {
+                const canvases = document.querySelectorAll("#flipbook canvas");
+                canvases.forEach((canvas, index) => {
+                    renderPage(index + 1, canvas);
+                });
+            }
         }
 
         // Ridimensiona il flipbook al caricamento e al ridimensionamento della finestra
