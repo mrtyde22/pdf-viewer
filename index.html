@@ -16,25 +16,27 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- Hammer.js -->
+    <!-- Aggiungi Hammer.js prima di Turn.js -->
     <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
 
-    <!-- Turn.js -->
-    <script src="/node_modules/turn.js/turn.js"></script>
+    <!-- Turn.js (versione CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.js"></script>
 
     <style>
         body { text-align: center; background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
         h1 { color: #333; margin: 20px 0; }
-        #flipbook { margin: 20px auto; }
-        .page { background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        #flipbook { width: 90%; height: 400px; margin: 20px auto; }
+        .page { width: 100%; height: 100%; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
         canvas { width: 100%; height: 100%; }
 
         /* Stili per dispositivi mobili */
         @media (max-width: 768px) {
+            #flipbook { width: 100%; height: 300px; margin: 10px auto; }
             h1 { font-size: 1.5em; }
         }
 
         @media (max-width: 480px) {
+            #flipbook { height: 250px; }
             h1 { font-size: 1.2em; }
         }
 
@@ -57,25 +59,6 @@
         var pdfUrl = "https://mrtyde22.github.io/pdf-viewer/pdf/Statuto_Svoltastudenti_2020.pdf"; // Percorso del PDF
         var pdfDoc = null;
 
-        // Funzione per calcolare le dimensioni proporzionali
-        function getProportionalDimensions(page) {
-            const viewport = page.getViewport({ scale: 1 });
-            const aspectRatio = viewport.width / viewport.height; // Rapporto larghezza/altezza
-            const maxWidth = window.innerWidth * 0.9; // 90% della larghezza della finestra
-            const maxHeight = window.innerHeight * 0.7; // 70% dell'altezza della finestra
-
-            // Calcola le dimensioni proporzionali
-            let width = maxWidth;
-            let height = width / aspectRatio;
-
-            if (height > maxHeight) {
-                height = maxHeight;
-                width = height * aspectRatio;
-            }
-
-            return { width, height };
-        }
-
         // Carica il PDF
         pdfjsLib.getDocument(pdfUrl).promise.then(function (doc) {
             pdfDoc = doc;
@@ -90,61 +73,41 @@
             }
 
             // Inizializza il flipbook con Turn.js
-            pdfDoc.getPage(1).then(function (page) {
-                const { width, height } = getProportionalDimensions(page);
-                $("#flipbook").turn({
-                    width: width,
-                    height: height,
-                    autoCenter: true
-                });
-
-                // Forza la visualizzazione della prima pagina
-                $("#flipbook").turn("page", 1);
+            $("#flipbook").turn({
+                width: 800,
+                height: 600,
+                autoCenter: true
             });
         });
 
         // Funzione per renderizzare una pagina
         function renderPage(pageNumber, canvas) {
             pdfDoc.getPage(pageNumber).then(function (page) {
-                const { width, height } = getProportionalDimensions(page);
-                const viewport = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
-
+                var scale = window.innerWidth <= 768 ? 1.0 : 1.5; // Scala ridotta per mobile
+                var viewport = page.getViewport({ scale: scale });
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
-                const ctx = canvas.getContext("2d");
-
-                // Fix per Safari: forza il ridisegno
-                setTimeout(() => {
-                    const renderContext = { canvasContext: ctx, viewport: viewport };
-                    page.render(renderContext);
-                }, 100);
+                var ctx = canvas.getContext("2d");
+                var renderContext = { canvasContext: ctx, viewport: viewport };
+                page.render(renderContext);
             });
         }
 
         // Funzione per ridimensionare il flipbook
         function resizeFlipbook() {
-            if (!pdfDoc) return;
+            var width = window.innerWidth * 0.9; // 90% della larghezza della finestra
+            var height = width * 0.75; // Mantieni un rapporto 4:3
 
-            // Ottieni la prima pagina per calcolare le proporzioni
-            pdfDoc.getPage(1).then(function (page) {
-                const { width, height } = getProportionalDimensions(page);
+            if (window.innerWidth <= 768) {
+                height = window.innerHeight * 0.6; // 60% dell'altezza della finestra per mobile
+            }
 
-                // Ridimensiona il flipbook
-                $("#flipbook").turn("size", width, height);
-
-                // Ridisegna tutte le pagine
-                const canvases = document.querySelectorAll("#flipbook canvas");
-                canvases.forEach((canvas, index) => {
-                    renderPage(index + 1, canvas);
-                });
-            });
+            $("#flipbook").turn("size", width, height);
         }
 
         // Ridimensiona il flipbook al caricamento e al ridimensionamento della finestra
         window.addEventListener("resize", resizeFlipbook);
-        window.addEventListener("orientationchange", function () {
-            setTimeout(resizeFlipbook, 500); // Fix per Safari
-        });
+        window.addEventListener("orientationchange", resizeFlipbook);
         document.addEventListener("DOMContentLoaded", resizeFlipbook);
 
         // Controlli di navigazione
@@ -155,28 +118,6 @@
         document.getElementById("nextPage").addEventListener("click", function () {
             $("#flipbook").turn("next");
         });
-
-        // Gestione dei tap su Safari
-        if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-            document.getElementById("flipbook").addEventListener("click", function (e) {
-                const rect = this.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                if (clickX > rect.width / 2) {
-                    $("#flipbook").turn("next");
-                } else {
-                    $("#flipbook").turn("previous");
-                }
-            });
-
-            // Abilita touch event su Safari
-            const hammer = new Hammer(document.getElementById("flipbook"));
-            hammer.on("swipeleft", function () {
-                $("#flipbook").turn("next");
-            });
-            hammer.on("swiperight", function () {
-                $("#flipbook").turn("previous");
-            });
-        }
     </script>
 
 </body>
