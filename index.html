@@ -25,18 +25,16 @@
     <style>
         body { text-align: center; background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
         h1 { color: #333; margin: 20px 0; }
-        #flipbook { width: 90%; height: 400px; margin: 20px auto; }
-        .page { width: 100%; height: 100%; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        #flipbook { margin: 20px auto; }
+        .page { background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
         canvas { width: 100%; height: 100%; }
 
         /* Stili per dispositivi mobili */
         @media (max-width: 768px) {
-            #flipbook { width: 100%; height: 300px; margin: 10px auto; }
             h1 { font-size: 1.5em; }
         }
 
         @media (max-width: 480px) {
-            #flipbook { height: 250px; }
             h1 { font-size: 1.2em; }
         }
 
@@ -59,6 +57,25 @@
         var pdfUrl = "https://mrtyde22.github.io/pdf-viewer/pdf/Statuto_Svoltastudenti_2020.pdf"; // Percorso del PDF
         var pdfDoc = null;
 
+        // Funzione per calcolare le dimensioni proporzionali
+        function getProportionalDimensions(page) {
+            const viewport = page.getViewport({ scale: 1 });
+            const aspectRatio = viewport.width / viewport.height; // Rapporto larghezza/altezza
+            const maxWidth = window.innerWidth * 0.9; // 90% della larghezza della finestra
+            const maxHeight = window.innerHeight * 0.7; // 70% dell'altezza della finestra
+
+            // Calcola le dimensioni proporzionali
+            let width = maxWidth;
+            let height = width / aspectRatio;
+
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * aspectRatio;
+            }
+
+            return { width, height };
+        }
+
         // Carica il PDF
         pdfjsLib.getDocument(pdfUrl).promise.then(function (doc) {
             pdfDoc = doc;
@@ -73,25 +90,24 @@
             }
 
             // Inizializza il flipbook con Turn.js
-            $("#flipbook").turn({
-                width: 800,
-                height: 600,
-                autoCenter: true
+            pdfDoc.getPage(1).then(function (page) {
+                const { width, height } = getProportionalDimensions(page);
+                $("#flipbook").turn({
+                    width: width,
+                    height: height,
+                    autoCenter: true
+                });
+
+                // Forza la visualizzazione della prima pagina
+                $("#flipbook").turn("page", 1);
             });
-
-            // Forza la visualizzazione della prima pagina
-            $("#flipbook").turn("page", 1);
-
-            // Ridimensiona il flipbook al caricamento
-            resizeFlipbook();
         });
 
         // Funzione per renderizzare una pagina
         function renderPage(pageNumber, canvas) {
             pdfDoc.getPage(pageNumber).then(function (page) {
-                const flipbookWidth = $("#flipbook").width();
-                const scale = flipbookWidth / page.getViewport({ scale: 1 }).width;
-                const viewport = page.getViewport({ scale: scale });
+                const { width, height } = getProportionalDimensions(page);
+                const viewport = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
 
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
@@ -107,19 +123,21 @@
 
         // Funzione per ridimensionare il flipbook
         function resizeFlipbook() {
-            const isMobile = window.innerWidth <= 768;
-            const width = isMobile ? window.innerWidth : 800;
-            const height = isMobile ? window.innerHeight * 0.7 : 600;
+            if (!pdfDoc) return;
 
-            $("#flipbook").turn("size", width, height);
+            // Ottieni la prima pagina per calcolare le proporzioni
+            pdfDoc.getPage(1).then(function (page) {
+                const { width, height } = getProportionalDimensions(page);
 
-            // Forza il ridisegno delle pagine
-            if (pdfDoc) {
+                // Ridimensiona il flipbook
+                $("#flipbook").turn("size", width, height);
+
+                // Ridisegna tutte le pagine
                 const canvases = document.querySelectorAll("#flipbook canvas");
                 canvases.forEach((canvas, index) => {
                     renderPage(index + 1, canvas);
                 });
-            }
+            });
         }
 
         // Ridimensiona il flipbook al caricamento e al ridimensionamento della finestra
