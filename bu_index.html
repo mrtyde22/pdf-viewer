@@ -156,35 +156,16 @@
     }
 
     function resizeFlipbook() {
-  if (!pdfDoc) return;
-
-  pdfDoc.getPage(1).then(function(page) {
-    const { width, height } = getProportionalDimensions(page);
-
-    // Assicura che anche l'altezza si restringa in proporzione quando la pagina è molto stretta
-    const flipbookContainer = document.getElementById('flipbook-container');
-    const maxHeight = flipbookContainer.clientHeight * 0.9; // Mantiene un po' di margine
-
-    let finalWidth = width * 2;
-    let finalHeight = height;
-
-    // Se l'altezza supera il limite disponibile, scala proporzionalmente
-    if (finalHeight > maxHeight) {
-      const scaleFactor = maxHeight / finalHeight;
-      finalWidth *= scaleFactor;
-      finalHeight *= scaleFactor;
+      if (!pdfDoc) return;
+      pdfDoc.getPage(1).then(function(page) {
+        const { width, height } = getProportionalDimensions(page);
+        $('#flipbook').turn('size', width * 2, height);
+        const canvases = document.querySelectorAll('#flipbook canvas');
+        canvases.forEach((canvas, index) => {
+          renderPage(index + 1, canvas);
+        });
+      });
     }
-
-    $('#flipbook').turn('size', finalWidth, finalHeight);
-
-    // Rirenderizza tutte le pagine per adattarle alla nuova dimensione
-    const canvases = document.querySelectorAll('#flipbook canvas');
-    canvases.forEach((canvas, index) => {
-      renderPage(index + 1, canvas);
-    });
-  });
-}
-
 
     window.addEventListener('resize', resizeFlipbook);
     window.addEventListener('orientationchange', () => {
