@@ -20,11 +20,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.js"></script>
 
     <style>
-        body { text-align: center; background: #f5f5f5; font-family: Arial, sans-serif; }
-        h1 { color: #333; }
-        #flipbook { width: 800px; height: 600px; margin: 50px auto; }
-        .page { width: 400px; height: 600px; background: white; display: flex; align-items: center; justify-content: center; }
+        body { text-align: center; background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        h1 { color: #333; margin: 20px 0; }
+        #flipbook { width: 90%; height: 400px; margin: 20px auto; }
+        .page { width: 100%; height: 100%; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
         canvas { width: 100%; height: 100%; }
+
+        /* Stili per dispositivi mobili */
+        @media (max-width: 768px) {
+            #flipbook { width: 100%; height: 300px; margin: 10px auto; }
+            h1 { font-size: 1.5em; }
+        }
+
+        @media (max-width: 480px) {
+            #flipbook { height: 250px; }
+            h1 { font-size: 1.2em; }
+        }
+
+        #controls { margin: 20px auto; text-align: center; }
+        #controls button { padding: 10px 20px; margin: 0 10px; font-size: 1em; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -32,6 +46,11 @@
     <h1>Visualizzatore PDF Sfogliabile</h1>
     
     <div id="flipbook"></div>
+
+    <div id="controls">
+        <button id="prevPage">Pagina Precedente</button>
+        <button id="nextPage">Pagina Successiva</button>
+    </div>
 
     <script>
         var pdfUrl = "https://mrtyde22.github.io/pdf-viewer/pdf/Statuto_Svoltastudenti_2020.pdf"; // Percorso del PDF
@@ -61,7 +80,8 @@
         // Funzione per renderizzare una pagina
         function renderPage(pageNumber, canvas) {
             pdfDoc.getPage(pageNumber).then(function (page) {
-                var viewport = page.getViewport({ scale: 1.5 });
+                var scale = window.innerWidth <= 768 ? 1.0 : 1.5; // Scala ridotta per mobile
+                var viewport = page.getViewport({ scale: scale });
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
                 var ctx = canvas.getContext("2d");
@@ -69,6 +89,32 @@
                 page.render(renderContext);
             });
         }
+
+        // Funzione per ridimensionare il flipbook
+        function resizeFlipbook() {
+            var width = window.innerWidth * 0.9; // 90% della larghezza della finestra
+            var height = width * 0.75; // Mantieni un rapporto 4:3
+
+            if (window.innerWidth <= 768) {
+                height = window.innerHeight * 0.6; // 60% dell'altezza della finestra per mobile
+            }
+
+            $("#flipbook").turn("size", width, height);
+        }
+
+        // Ridimensiona il flipbook al caricamento e al ridimensionamento della finestra
+        window.addEventListener("resize", resizeFlipbook);
+        window.addEventListener("orientationchange", resizeFlipbook);
+        document.addEventListener("DOMContentLoaded", resizeFlipbook);
+
+        // Controlli di navigazione
+        document.getElementById("prevPage").addEventListener("click", function () {
+            $("#flipbook").turn("previous");
+        });
+
+        document.getElementById("nextPage").addEventListener("click", function () {
+            $("#flipbook").turn("next");
+        });
     </script>
 
 </body>
