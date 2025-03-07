@@ -96,8 +96,12 @@
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
                 const ctx = canvas.getContext("2d");
-                const renderContext = { canvasContext: ctx, viewport: viewport };
-                page.render(renderContext);
+
+                // Fix per Safari: forza il ridisegno
+                setTimeout(() => {
+                    const renderContext = { canvasContext: ctx, viewport: viewport };
+                    page.render(renderContext);
+                }, 100);
             });
         }
 
@@ -120,7 +124,9 @@
 
         // Ridimensiona il flipbook al caricamento e al ridimensionamento della finestra
         window.addEventListener("resize", resizeFlipbook);
-        window.addEventListener("orientationchange", resizeFlipbook);
+        window.addEventListener("orientationchange", function () {
+            setTimeout(resizeFlipbook, 500); // Fix per Safari
+        });
         document.addEventListener("DOMContentLoaded", resizeFlipbook);
 
         // Controlli di navigazione
@@ -131,6 +137,28 @@
         document.getElementById("nextPage").addEventListener("click", function () {
             $("#flipbook").turn("next");
         });
+
+        // Gestione dei tap su Safari
+        if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+            document.getElementById("flipbook").addEventListener("click", function (e) {
+                const rect = this.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                if (clickX > rect.width / 2) {
+                    $("#flipbook").turn("next");
+                } else {
+                    $("#flipbook").turn("previous");
+                }
+            });
+
+            // Abilita touch event su Safari
+            const hammer = new Hammer(document.getElementById("flipbook"));
+            hammer.on("swipeleft", function () {
+                $("#flipbook").turn("next");
+            });
+            hammer.on("swiperight", function () {
+                $("#flipbook").turn("previous");
+            });
+        }
     </script>
 
 </body>
